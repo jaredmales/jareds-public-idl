@@ -241,7 +241,7 @@ for i = 0d, nregrs do begin ;radial
                           dqisdn=keyword_set(dqisdn), modelrims=modelrims, modelsub=modelsub, regmedsub=keyword_set(regmedsub), silent=keyword_set(silent)
       endif else begin
          if(doref) then begin
-            pca_worker_asdi, rpsfsub, rims, refrims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
+            pca_worker_ref, rpsfsub, rims, refrims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
                        refonly=keyword_set(refonly),dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub),$
                              silent=keyword_set(silent)
          endif else begin
@@ -274,7 +274,7 @@ endelse
 
 ;Now derot each individual combination
 
-return
+
 for k=0, n_elements(nmodes) -1 do begin
 
    derotcomb_cube, finimt, psfsub[*,*,*,k], derot, meancomb=keyword_set(meancomb), sigma=sigma, $
