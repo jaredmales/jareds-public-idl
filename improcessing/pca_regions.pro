@@ -244,6 +244,7 @@ for i = 0d, nregrs do begin ;radial
             pca_worker_ref, rpsfsub, rims, refrims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
                        refonly=keyword_set(refonly),dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub),$
                              silent=keyword_set(silent)
+                             
          endif else begin
             pca_worker, rpsfsub, rims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
                      dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub), silent=keyword_set(silent)

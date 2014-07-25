@@ -158,7 +158,9 @@ for i=i0, i1 do begin
          for j=j, donmodes-1 do psf = psf + cfs[j]*klims[*,j]
         
          newim = adi_rims[*,i] - psf
-         if(doregmedsub) then psfsub[*,i, k] = newim-median(newim)
+         psfsub[*,i, k] = newim;-median(newim)
+         if(doregmedsub) then psfsub[*,i, k] = psfsub[*,i, k] - median(psfsub[*,i, k])
+;         if(doregmedsub) then psfsub[*,i, k] = newim-median(newim)
          
       endelse
       
