@@ -5,7 +5,8 @@
 ;  Get dimensions of an image cube.
 ;
 ; Description:
-;  Calculates the dimensions of an image cube, of form [dim1, dim2, nims], where nims is the number of images.  Just a wrapper for size.
+;  Calculates the dimensions of an image cube, of form [dim1, dim2, nims], where nims is the 
+;  number of images.  Really just a wrapper for size().
 ;  Also works for 2D images, then nims will be 1
 ;
 ; INPUTS:

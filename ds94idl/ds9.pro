@@ -16,7 +16,7 @@
 ; INPUT KEYWORDS:
 ;   preserve : if set, then ds9 will preserve the image scaling
 ;   frame    : set to a value >=1 to specify which frame to display the image in
-;   nolocal  : set to avoid creating a local copy of the data - this will prevent imexam from working properly
+;   newframe : if set, then a new frame will be added and the image displayed in it
 ;
 ; OUTPUTS:
 ;   none
