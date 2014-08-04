@@ -1,19 +1,29 @@
-pro pca_worker_ref, psfsub, adi_rims, sdi_rims, rotoff, nmodes, mindq, err=err, msims=msims, nocovar=nocovar, silent=silent, indmean=indmean, modelrims=modelrims, modelsub=modelsub, imno=imno, maxdq=maxdq, refonly=refonly, dqisdn=dqisdn, regmedsub=regmedsub
+pro pca_worker_ref, psfsub, adi_rims, sdi_rims, rotoff, nmodes, mindq, err=err, msims=msims, $
+                    nocovar=nocovar, silent=silent, indmean=indmean, modelrims=modelrims, $
+                    modelsub=modelsub, imno=imno, maxdq=maxdq, refonly=refonly, dqisdn=dqisdn, $
+                    regmedsub=regmedsub
 
+;-------------------------------------------------------------------  
+;Get the number of pixels and number of images
 dim1 = (size(adi_rims))[1]
 nims = (size(adi_rims))[2]
+
 
 
 sdi_dim1 = (size(sdi_rims))[1]
 sdi_nims = (size(sdi_rims))[2]
 
-
+;-------------------------------------------------------------------  
+;Combine the two image groups
 rims = [[adi_rims], [sdi_rims]]
 
-
+;-------------------------------------------------------------------  
+;Decide if these are doubles or floats
 dodouble = 0
 if(size(rims, /type) eq 5) then dodouble = 1
 
+;-------------------------------------------------------------------  
+;Calculate the covariance matrix if desired
 if(~keyword_set(nocovar)) then begin
 
    pca_covarmat, err, rims , meansub=(keyword_set(indmean))
@@ -22,14 +32,17 @@ if(~keyword_set(nocovar)) then begin
 
 endif
 
+;-------------------------------------------------------------------  
+;Allocate the psfsub storage
 if(dodouble) then begin
    psfsub = dblarr(dim1, nims, n_elements(nmodes))
 endif else begin
    psfsub = fltarr(dim1, nims, n_elements(nmodes))
 endelse
 
+;-------------------------------------------------------------------  
+;Setup forward modeling if desired
 domodel = 0
-
 if(n_elements(modelrims) gt 1 and arg_present(modelsub)) then begin
 
    domodel = 1
@@ -42,21 +55,30 @@ if(n_elements(modelrims) gt 1 and arg_present(modelsub)) then begin
    
 endif
 
+;-------------------------------------------------------------------
 ;Region median subtraction
 doregmedsub = 0
 if(keyword_set(regmedsub)) then doregmedsub = 1
 
-
+;-------------------------------------------------------------------  
+;Default maxdq is huge
 if(n_elements(maxdq) lt 1) then maxdq = 1e7
 
+;-------------------------------------------------------------------  
+;Massage rotoff so angle subtraction works
 roff = requad_angles(rotoff)
 
+;-------------------------------------------------------------------  
+;Setup for image exclusion, rather than rotation exclusion
 if(keyword_set(dqisdn)) then imnum=indgen(nims)
 
+;-------------------------------------------------------------------  
 ;Allocate klims now
 actnmodes = max(nmodes)
 klims = fltarr(dim1, actnmodes)
 
+;-------------------------------------------------------------------  
+;Setup to do a specific image only, or all images by default
 if(n_elements(imno) eq 1) then begin
    i0 = imno
    i1 = imno
@@ -65,44 +87,61 @@ endif else begin
    i1 = nims-1
 endelse
 
+;-------------------------------------------------------------------
+;Handle no rotation exclusion intelligently
+norotmask=0
+klims_done = 0
+if(mindq eq 0 and maxdq eq 1e5) then begin
+   norotmask = 1
+endif
+
+;-------------------------------------------------------------------
+;Handle reference images only
 rotoff_scale = 1.
 if(keyword_set(refonly)) then begin
    rotoff_scale = 0.
    if(mindq eq 0) then mindq = 0.0001
+   
+   norotmask = 1 ;this is always true if /refonly is set
+   
+   print, 'rotoff_scale  ', rotoff_scale
 endif
 
 
+;-------------------------------------------------------------------
+
+;####################################################################
+;    ACTUAL WORK STARTS HERE
+;####################################################################
+
 for i=i0, i1 do begin
 
-   if(keyword_set(dqisdn)) then begin
-      dimnum = [abs(imnum - imnum[i])*rotoff_scale, fltarr(sdi_nims)+1e6]
-      idx = where(dimnum ge mindq)
+   ;KL-images are only calculated every time if a rotation mask is applied
+   if( norotmask eq 0 or klims_done eq 0 ) then begin
+   
+      if(keyword_set(dqisdn)) then begin
+         dimnum = [abs(imnum - imnum[i])*rotoff_scale, fltarr(sdi_nims)+1e6];add sdi images with huge dang.
+         idx = where(dimnum ge mindq)
       
-   endif else begin
+      endif else begin
+         dang = [abs(angsub(roff,roff[i])) * rotoff_scale, fltarr(sdi_nims)+1e6] ;add sdi images with huge dang.
+         idx = where(dang ge mindq and dang le maxdq)
+      endelse
+      
+      terr =  err[*, idx]
+      terr =  terr[idx, *]
    
-      dang = [abs(angsub(roff,roff[i])) * rotoff_scale, fltarr(sdi_nims)+1e3] ;add sdi images with huge dang.
-      ;sdx = sort(dang)
-      idx = where(dang ge mindq and dang le maxdq)
-   endelse
-   
-   ;idx= idx[0:49]
-   
-   terr =  err[*, idx]
-   terr =  terr[idx, *]
+      tims = rims[*, idx]
 
-   tims = rims[*, idx]
-
+      pca_klims, klims, terr, tims, actnmodes, /silent
+      klims_done = 1
+   endif
    
    if(~keyword_set(silent)) then begin
       status = 'pca_worker: performing PCA for image ' + strcompress( string(i + 1) + ' / ' + string(nims), /rem) $
       + ' with ' + strcompress(string(n_elements(idx)), /rem) + ' R images.'
       statusline, status
    endif
-   
-
-   pca_klims, klims, terr, tims, actnmodes, /silent
-   
-   
    
    cfs = dblarr(actnmodes)
    
