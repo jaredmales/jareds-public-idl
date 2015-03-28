@@ -71,8 +71,8 @@ pro pca_regions, finim, ims, derot, mindpx, regdr, regdq, nmodes, minrad=minrad,
                        dpxisdq=dpxisdq, dqisdn=dqisdn,$
                        meancomb=meancomb, sigma=sigma, indmean=indmean, regmedsub=regmedsub, psfsub=psfsub, $
                        model_ims=model_ims, model_finim=model_finim, $
-                       fitsfiles=fitsfile, ref_ims=ref_ims, refonly=refonly, core_rads=core_rads, deltar=deltar,$
-                       silent=silent
+                       fitsfiles=fitsfile, ref_ims=ref_ims, refonly=refonly, refderot=refderot, $
+                       core_rads=core_rads, deltar=deltar, silent=silent, mask=mask, maxdq=maxdq
                        
 
 if ~keyword_set(silent) then print, "Start: ", systime()    
@@ -96,6 +96,13 @@ if(n_elements(ref_ims) gt 1) then begin
 endif
 
 if(n_elements(deltar) ne 1) then deltar=regdr
+
+;Check if a mask has been supplied
+if(n_elements(mask) lt dim1*dim2) then begin
+   _mask = dblarr(dim1,dim2) + 1.
+endif else begin
+   _mask = mask
+endelse
 
 ;-------------------------------------------------------------------
 ;Calculate the average image,and subtract it, unless we're doing individual image means
@@ -226,7 +233,7 @@ for i = 0d, nregrs do begin ;radial
                 ' ' + strcompress(string(qmin),/rem) + ' <= q < ' + strcompress(string(qmax),/rem)
       endif
       
-      idx = where((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max));
+      idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)) and _mask ne 0);
       
       if(idx[0] eq -1) then continue
       
@@ -243,11 +250,11 @@ for i = 0d, nregrs do begin ;radial
          if(doref) then begin
             pca_worker_ref, rpsfsub, rims, refrims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
                        refonly=keyword_set(refonly),dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub),$
-                             silent=keyword_set(silent)
+                             silent=keyword_set(silent), refderot=refderot
                              
          endif else begin
             pca_worker, rpsfsub, rims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
-                     dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub), silent=keyword_set(silent)
+                     dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub), silent=keyword_set(silent), maxdq=maxdq
          endelse
       endelse
       
@@ -279,7 +286,7 @@ endelse
 for k=0, n_elements(nmodes) -1 do begin
 
    derotcomb_cube, finimt, psfsub[*,*,*,k], derot, meancomb=keyword_set(meancomb), sigma=sigma, $
-                     silent=keyword_set(silent)
+                     silent=keyword_set(silent), mask=mask
    finim[*,*,k] = finimt
    
 endfor

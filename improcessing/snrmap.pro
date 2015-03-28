@@ -1,4 +1,4 @@
-pro snrmap, im, snrmap, dr, annwid, rad=rad, std=std, minrad=minrad, maxrad=maxrad, mask=mask, maxsnr=maxsnr
+pro snrmap, im, snrmap, dr, annwid, rad=rad, std=std, minrad=minrad, maxrad=maxrad, mask=mask, xmask=xmask, maxsnr=maxsnr
 ;+
 ; NAME: snrmap
 ;
@@ -79,12 +79,16 @@ nr = (rmax-rmin)/dr
 std = dblarr(nr)
 rad = dblarr(nr)
 
+totmask = mask
+
+if(n_elements(xmask) eq n_elements(mask)) then totmask = totmask*xmask
+
 for i=0, n_elements(std)-1 do begin
 
    rad[i] = rmin+i*dr; + .5*dr
 
-   if(n_elements(mask) gt 1) then begin   
-      idx = where(r ge rmin+i*dr - .5*annwid and r lt rmin + i*dr+.5*annwid and mask ne 0)
+   if(n_elements(totmask) gt 1) then begin   
+      idx = where(r ge rmin+i*dr - .5*annwid and r lt rmin + i*dr+.5*annwid and totmask ne 0)
    endif else begin
       idx = where(r ge rmin+i*dr -.5*annwid and r lt rmin + i*dr+dr+ .5* annwid)
    endelse
