@@ -10,7 +10,7 @@ if(keyword_set(silent)) then besilent = 1
 
 
 if(n_elements(mask) gt 1) then begin
-   get_cubedims(mask), maskd1, maskd2, maskn
+   get_cubedims, mask, maskd1, maskd2, maskn
 endif
 
 
