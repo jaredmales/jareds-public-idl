@@ -72,7 +72,7 @@ pro pca_regions, finim, ims, derot, mindpx, regdr, regdq, nmodes, minrad=minrad,
                        meancomb=meancomb, sigma=sigma, indmean=indmean, regmedsub=regmedsub, psfsub=psfsub, $
                        model_ims=model_ims, model_finim=model_finim, $
                        fitsfiles=fitsfile, ref_ims=ref_ims, refonly=refonly, refderot=refderot, $
-                       core_rads=core_rads, deltar=deltar, silent=silent, mask=mask, maxdq=maxdq
+                       core_rads=core_rads, deltar=deltar, silent=silent, mask=mask, maskexlcude=maskexclude, maxdq=maxdq
                        
 
 if ~keyword_set(silent) then print, "Start: ", systime()    
@@ -233,7 +233,11 @@ for i = 0d, nregrs do begin ;radial
                 ' ' + strcompress(string(qmin),/rem) + ' <= q < ' + strcompress(string(qmax),/rem)
       endif
       
-      idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)) and _mask ne 0);
+      if(keyword_set(maskexclude)) then begin
+         idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)) and _mask ne 0);
+      endif else begin
+         idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)));
+      endelse
       
       if(idx[0] eq -1) then continue
       

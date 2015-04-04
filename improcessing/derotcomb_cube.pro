@@ -1,4 +1,4 @@
-pro derotcomb_cube, finim, psfsub, derot, xreg=xreg, meancomb=meancomb, sigma=sigma, sigmed=sigmed, relrot=relrot, silent=silent
+pro derotcomb_cube, finim, psfsub, derot, xreg=xreg, meancomb=meancomb, sigma=sigma, sigmed=sigmed, relrot=relrot, silent=silent, mask=mask
 ;+
 ; NAME: derotcomb_cube
 ; 
@@ -7,8 +7,8 @@ pro derotcomb_cube, finim, psfsub, derot, xreg=xreg, meancomb=meancomb, sigma=si
 ;
 ; DESCRIPTION:
 ;   De-rotates the images in psfsub (usually psf subtracted images) by derot.  
-;   Then combines them by either the median(default) or mean, or sigma clipped mean. 
-;   NOTE: psfsub is modified, on return it contains the de-rotated images.
+;   Then combines them by either the median(default) or mean. NOTE: psfsub is modified, on return it contains
+;   the de-rotated images.
 ;
 ; INPUTS:
 ;   psfsub   :  cube of images, format [dim1, dim2, no_images] - modified by this routine.
@@ -37,7 +37,7 @@ if(n_elements(sigma) eq 0) then sigma = 0
 
 if(n_elements(derot) eq nims) then begin
    if ~keyword_set(silent) then print, 'derotcomb_cube: De-rotating'
-   rot_cube, psfsub, derot
+   rot_cube, psfsub, derot, mask=mask
 endif
 
 if(keyword_set(xreg)) then begin
