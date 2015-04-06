@@ -1,6 +1,6 @@
 pro pca_worker, psfsub, rims, rotoff, nmodes, mindq, err=err, msims=msims, nocovar=nocovar, $
-                silent=silent, indmean=indmean, modelrims=modelrims, modelsub=modelsub, imno=imno, $
-                maxdq=maxdq, dqisdn=dqisdn, regmedsub=regmedsub
+                silent=silent, modelrims=modelrims, modelsub=modelsub, imno=imno, $
+                maxdq=maxdq, dqisdn=dqisdn, regmedsub=regmedsub, mask=mask
 ;
 ;  psfsubs  :  the psf-subtracted images
 ;  rims     :  the input images, formatted as row images
@@ -23,7 +23,7 @@ if(size(rims, /type) eq 5) then dodouble = 1
 ;Calculate the covariance matrix if desired
 if(~keyword_set(nocovar)) then begin
 
-   pca_covarmat, err, rims, meansub=(keyword_set(indmean))
+   pca_covarmat, err, rims, /meansub, mask=mask ;=(keyword_set(indmean))
 
    if(arg_present(msims)) then msims = rims
 
@@ -50,7 +50,12 @@ if(n_elements(modelrims) gt 1 and arg_present(modelsub)) then begin
    endif else begin
       modelsub = fltarr(dim1, nims, n_elements(nmodes))
    endelse
+
+   if(keyword_set(indmean)) then begin
    
+      for i=0, nims-1 do modelrims[*,i] = modelrims[*,i] - mean(modelrims[*,i])
+      
+   endif
 endif
 
 ;-------------------------------------------------------------------  
@@ -172,9 +177,10 @@ for i=i0, i1 do begin
          psfsub[*,i, k] = newim
          if(doregmedsub) then psfsub[*,i, k] = psfsub[*,i, k] - median(psfsub[*,i, k])
          
-         newim = modelrims[*,i] - psfmod
+         newim = modelrims[*,i] - psf;psfmod
          modelsub[*,i,k] = newim;-median(newim)
          if(doregmedsub) then modelsub[*,i,k] = modelsub[*,i,k] - median(modelsub[*,i,k])
+         
          
       endif else begin
       

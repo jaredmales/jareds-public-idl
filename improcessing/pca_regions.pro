@@ -24,7 +24,6 @@
 ;  dqisdn    :  treat mindpx as a number of images to mask, rather than either pixels or angle
 ;  meancomb  :  mean combine final image, rather than median (the default)
 ;  sigma     :  sigma clip mean-combine the final image, with sigma specifying how many sigma to clip
-;  indmean   :  subtract individual image means, instead of the global mean image (Soummer et al. strict)
 ;  regmedsub :  subtract the median of each region after PSF subtraction
 ;  model_ims :  a cube of images to use for forward modeling.  should be identical in size to ims.
 ;  ref_ims   :  a cube of reference images to use as part of the basis set.
@@ -65,15 +64,16 @@
 ;  2013-03-01: Written by Jared Males, jrmales@email.arizona.edu
 ;  2014-04-15: Added reference image capabilities. Jared Males
 ;  2014-04-30: Updated documentation
-; 
+;  2015-04-06: removed indmean keyword (must always be true) 
 ;-
 pro pca_regions, finim, ims, derot, mindpx, regdr, regdq, nmodes, minrad=minrad, maxrad=maxrad, minang=minang, $
                        dpxisdq=dpxisdq, dqisdn=dqisdn,$
-                       meancomb=meancomb, sigma=sigma, indmean=indmean, regmedsub=regmedsub, psfsub=psfsub, $
+                       meancomb=meancomb, sigma=sigma,  regmedsub=regmedsub, psfsub=psfsub, $
                        model_ims=model_ims, model_finim=model_finim, $
                        fitsfiles=fitsfile, ref_ims=ref_ims, refonly=refonly, refderot=refderot, $
-                       core_rads=core_rads, deltar=deltar, silent=silent, mask=mask, maskexlcude=maskexclude, maxdq=maxdq
+                       core_rads=core_rads, deltar=deltar, silent=silent, mask=mask, maxdq=maxdq
                        
+;indmean=indmean,
 
 if ~keyword_set(silent) then print, "Start: ", systime()    
 
@@ -97,31 +97,37 @@ endif
 
 if(n_elements(deltar) ne 1) then deltar=regdr
 
+;--------------------------------------------------------------------
 ;Check if a mask has been supplied
 if(n_elements(mask) lt dim1*dim2) then begin
-   _mask = dblarr(dim1,dim2) + 1.
+   domask = 0;_mask = dblarr(dim1,dim2) + 1.
 endif else begin
-   _mask = mask
+   get_cubedims, mask, maskdim1, maskdim2, masknims
+   if(masknims eq 1) then begin
+      domask = 1
+   endif else begin
+      domask = 2; changing mask
+   endelse
 endelse
 
 ;-------------------------------------------------------------------
 ;Calculate the average image,and subtract it, unless we're doing individual image means
-if(~keyword_set(indmean)) then begin
-   mnpsf = total(ims, 3)/double(nims)
-
-   for i=0, nims-1 do ims[*,*,i] = ims[*,*,i] - mnpsf
-
-   if(domodel) then begin
-      modpsf = total(model_ims, 3)/double(nims)
-      for i=0, nims-1 do model_ims[*,*,i] = model_ims[*,*,i] - modpsf
-   endif
-   
-   if(doref) then begin
-      refpsf = total(ref_ims, 3)/double(ref_nims)
-      for i=0, ref_nims-1 do ref_ims[*,*,i] = ref_ims[*,*,i] - refpsf
-   endif
-   
-endif
+; if(~keyword_set(indmean)) then begin
+;    mnpsf = total(ims, 3)/double(nims)
+; 
+;    for i=0, nims-1 do ims[*,*,i] = ims[*,*,i] - mnpsf
+; 
+;    if(domodel) then begin
+;       modpsf = total(model_ims, 3)/double(nims)
+;       for i=0, nims-1 do model_ims[*,*,i] = model_ims[*,*,i] - modpsf
+;    endif
+;    
+;    if(doref) then begin
+;       refpsf = total(ref_ims, 3)/double(ref_nims)
+;       for i=0, ref_nims-1 do ref_ims[*,*,i] = ref_ims[*,*,i] - refpsf
+;    endif
+;    
+; endif
 
 ;-------------------------------------------------------------------
 
@@ -175,6 +181,8 @@ ims = reform( ims, dim1*dim2, nims, /overwrite)
 if(domodel) then model_ims = reform(model_ims, dim1*dim2, nims, /overwrite)
 
 if(doref) then ref_ims = reform(ref_ims, dim1*dim2, ref_nims, /over)
+
+if(domask eq 2) then mask = reform(mask, dim1*dim2, nims, /overwrite)
 
 ;-------------------------------------------------------------------
 
@@ -233,8 +241,8 @@ for i = 0d, nregrs do begin ;radial
                 ' ' + strcompress(string(qmin),/rem) + ' <= q < ' + strcompress(string(qmax),/rem)
       endif
       
-      if(keyword_set(maskexclude)) then begin
-         idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)) and _mask ne 0);
+      if(domask =2) then begin
+         idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)) and mask ne 0);
       endif else begin
          idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)));
       endelse
@@ -247,18 +255,25 @@ for i = 0d, nregrs do begin ;radial
 
       if(doref) then refrims = ref_ims[idx,*]
       
+      if(domask eq 2) then begin
+         mask_rims = mask[idx, *]
+      endif else begin
+         mask_rims =0
+      endelse
+      
       if(domodel) then begin
-         pca_worker, rpsfsub, rims, derot, nmodes, mindq, indmean=keyword_set(indmean),$ 
+         pca_worker, rpsfsub, rims, derot, nmodes, mindq, $ 
                           dqisdn=keyword_set(dqisdn), modelrims=modelrims, modelsub=modelsub, regmedsub=keyword_set(regmedsub), silent=keyword_set(silent)
       endif else begin
          if(doref) then begin
-            pca_worker_ref, rpsfsub, rims, refrims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
+            pca_worker_ref, rpsfsub, rims, refrims, derot, nmodes, mindq,  $
                        refonly=keyword_set(refonly),dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub),$
                              silent=keyword_set(silent), refderot=refderot
                              
          endif else begin
-            pca_worker, rpsfsub, rims, derot, nmodes, mindq, indmean=keyword_set(indmean), $
-                     dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub), silent=keyword_set(silent), maxdq=maxdq
+            pca_worker, rpsfsub, rims, derot, nmodes, mindq, $
+                     dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub), silent=keyword_set(silent), maxdq=maxdq, $
+                        mask=mask_rims
          endelse
       endelse
       
@@ -274,6 +289,8 @@ endfor ;i...nregrs
 ;Post processing   
 ;Reform back to 2D images
 ims = reform(ims, dim1, dim2, nims, /overwrite)
+
+if(domask eq 2) then mask = reform(mask, dim1, dim2, nims, /overwrite)
 
 psfsub = reform(psfsub, dim1, dim2, nims, n_elements(nmodes), /overwrite)
 

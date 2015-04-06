@@ -31,7 +31,7 @@ for i=0, nims-1 do begin
          rmask = rot(mask[*,*,i], -1.d*double(rotangs[i]), cubic=-0.5)
       endelse
       
-      idx = where(rmask lt 1.)
+      idx = where(rmask lt 0.2)
       rmask[idx] = m0val
       
       ims[*,*,i] = ims[*,*,i]*rmask

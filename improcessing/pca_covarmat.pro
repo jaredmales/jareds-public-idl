@@ -25,7 +25,7 @@
 ; BUGS/WISH LIST:
 ;
 ;-
-pro pca_covarmat, err, rims, meansub=meansub
+pro pca_covarmat, err, rims, meansub=meansub, mask=mask
 
 
 ;Do mean subtraction if requested
@@ -35,12 +35,24 @@ if(keyword_set(meansub)) then begin
 
    nims = sz[2]
 
+   ;Is there a mask?
+   domask = 0
+   if(n_elements(mask) gt 1) then domask = 1
+   
    for i=0, nims-1 do begin
       
-      mn = mean(rims[*,i])
-      
-      rims[*,i] = rims[*,i] - mn
+      if(~domask) then begin
+         mn = mean(rims[*,i])
+         rims[*,i] = rims[*,i] - mn
+      endif else begin
+         idx = where(mask[*,i] ne 0, comp=zdx)
+                  
+         mn = mean(rims[idx,i])
          
+         rims[idx,i] = rims[idx,i] - mn
+
+      endelse
+      
    endfor
    
 endif
@@ -48,18 +60,6 @@ endif
 ;Now calculate the covariance matrix
 err = rims ## transpose(rims)
 
-; sz = size(rims)
-; 
-; npix = sz[1]
-; nims = sz[2]
-; 
-; err = dblarr(nims, nims)
-; 
-; for i=0, nims-1 do begin
-;    for j=0, nims-1 do begin
-;       err[i,j] = total(rims[*,i]*rims[*,j])
-;    endfor
-; endfor
 
 
 end

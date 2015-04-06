@@ -40,6 +40,7 @@ if(n_elements(derot) eq nims) then begin
    rot_cube, psfsub, derot, mask=mask
 endif
 
+
 if(keyword_set(xreg)) then begin
    visao_reg_cube, psfsub, /doshift
 endif
