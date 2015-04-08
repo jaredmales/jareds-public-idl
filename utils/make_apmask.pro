@@ -37,7 +37,7 @@ function make_apmask, x0, y0, semimaj,  xarr, yarr, axrat=axrat, pa=pa, skywidth
 if(n_elements(axrat) ne 1) then axrat = 1.
 if(n_elements(pa) ne 1) then pa = 0.
 
-if n_elements(xarr eq 1) then r=rarr(float(xarr), float(yarr), xarr, yarr, /pix)
+if n_elements(xarr) eq 1 then r=rarr(float(xarr*1.), float(yarr*1.), xarr, yarr, /pix)
 
 r = sqrt((yarr-y0)^2 +  (xarr-x0)^2)
 
