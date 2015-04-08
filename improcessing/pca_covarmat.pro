@@ -47,11 +47,12 @@ if(keyword_set(meansub)) then begin
       endif else begin
          idx = where(mask[*,i] ne 0, comp=zdx)
                   
-         mn = mean(rims[idx,i])
+         ;mn = mean(rims[idx,i])
          
-         rims[idx,i] = rims[idx,i] - mn
+         rims[idx,i] = rims[idx,i] - mean(rims[idx,i]); mn
 
       endelse
+      
       
    endfor
    

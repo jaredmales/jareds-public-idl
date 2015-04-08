@@ -51,11 +51,11 @@ if(n_elements(modelrims) gt 1 and arg_present(modelsub)) then begin
       modelsub = fltarr(dim1, nims, n_elements(nmodes))
    endelse
 
-   if(keyword_set(indmean)) then begin
-   
-      for i=0, nims-1 do modelrims[*,i] = modelrims[*,i] - mean(modelrims[*,i])
-      
-   endif
+;    if(keyword_set(indmean)) then begin
+;    
+;       for i=0, nims-1 do modelrims[*,i] = modelrims[*,i] - mean(modelrims[*,i])
+;       
+;    endif
 endif
 
 ;-------------------------------------------------------------------  
@@ -111,6 +111,7 @@ for i=i0, i1 do begin
 
    ;KL-images are only calculated every time if a rotation mask is applied
    if( norotmask eq 0 or klims_done eq 0 ) then begin
+   
       if(keyword_set(dqisdn)) then begin
          idx = where(abs(imnum - imnum[i]) ge mindq)
       endif else begin
@@ -118,6 +119,7 @@ for i=i0, i1 do begin
          idx = where(dang ge mindq and dang le maxdq)
       endelse
    
+      
       terr =  err[*, idx]
       terr =  terr[idx, *]
 
@@ -125,6 +127,9 @@ for i=i0, i1 do begin
  
       pca_klims, klims, terr, tims, actnmodes, /silent
       klims_done = 1
+      
+      ;if(n_elements(mask gt 1)) then klims = klims*mask
+      ;print, klims[-1]
    endif
    
    if(~keyword_set(silent)) then begin
@@ -147,6 +152,8 @@ for i=i0, i1 do begin
       
    endif else begin
       for j=0, actnmodes-1 do cfs[j] = klims[*,j]##transpose(rims[*,i])
+      
+  
    endelse
    
    if(dodouble) then begin
@@ -186,7 +193,7 @@ for i=i0, i1 do begin
       
          for j=j, donmodes-1 do psf = psf + cfs[j]*klims[*,j]
         
-         newim = rims[*,i] - psf
+         newim = rims[*,i] - psf*mask[*,i]
          psfsub[*,i, k] = newim;-median(newim)
          if(doregmedsub) then psfsub[*,i, k] = psfsub[*,i, k] - median(psfsub[*,i, k])
          

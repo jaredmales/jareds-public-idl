@@ -28,14 +28,19 @@
 ;  model_ims :  a cube of images to use for forward modeling.  should be identical in size to ims.
 ;  ref_ims   :  a cube of reference images to use as part of the basis set.
 ;  refonly   :  if set, then only the reference images are used in determining the PSF
+;  refderot  :  derotation angles for the reference images, use if ADI exclusion is desired
 ;  core_rads :  a 2 element vector, specifying the min and max radius of the core.  if set, then these pixels will be 
 ;               included in all search regions regardless of their size and location.
 ;  deltar    :  spacing of search regions.  by default this is regdr.  the amount of each search region kept in the
 ;            :  final image will be deltar.
 ;  silent    :  if set then no status messages are printed.
+;  mask      :  a binary mask, either single image or a cube, whose pixels are set to excluded from the reduction.  note that these 
+;               pixels are assumed to be 0 in the input ims.  If a cube, each image can have a different mask.  Note also that for 
+;               best results each image in ims should be high-pass filtered, such as by radial profile subtraction
+;  maxdq     :  the maximum rotation to include.  images which have rotated more than this are not used in the psf.
 ;
 ; OUTPUTS:
-;  finim    : the final derotated, combined image
+;  finim    : the final derotated, combined image(s)
 ;
 ; OUTPUT KEYWORDS:
 ;  psfsub      :  the individual PSF subtracted images, derotated.
@@ -64,7 +69,7 @@
 ;  2013-03-01: Written by Jared Males, jrmales@email.arizona.edu
 ;  2014-04-15: Added reference image capabilities. Jared Males
 ;  2014-04-30: Updated documentation
-;  2015-04-06: removed indmean keyword (must always be true) 
+;  2015-04-06: removed indmean keyword (must always be true), updated masking.  updated docs.
 ;-
 pro pca_regions, finim, ims, derot, mindpx, regdr, regdq, nmodes, minrad=minrad, maxrad=maxrad, minang=minang, $
                        dpxisdq=dpxisdq, dqisdn=dqisdn,$
@@ -109,6 +114,8 @@ endif else begin
       domask = 2; changing mask
    endelse
 endelse
+
+
 
 ;-------------------------------------------------------------------
 ;Calculate the average image,and subtract it, unless we're doing individual image means
@@ -184,6 +191,7 @@ if(doref) then ref_ims = reform(ref_ims, dim1*dim2, ref_nims, /over)
 
 if(domask eq 2) then mask = reform(mask, dim1*dim2, nims, /overwrite)
 
+
 ;-------------------------------------------------------------------
 
 ;Check if core pixels are included in each region
@@ -241,7 +249,7 @@ for i = 0d, nregrs do begin ;radial
                 ' ' + strcompress(string(qmin),/rem) + ' <= q < ' + strcompress(string(qmax),/rem)
       endif
       
-      if(domask =2) then begin
+      if(domask eq 1) then begin
          idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)) and mask ne 0);
       endif else begin
          idx = where( ((r ge rmin and r lt rmax and q ge qmin and q lt qmax) or (r ge core_min and r lt core_max)));
@@ -290,8 +298,11 @@ endfor ;i...nregrs
 ;Reform back to 2D images
 ims = reform(ims, dim1, dim2, nims, /overwrite)
 
-if(domask eq 2) then mask = reform(mask, dim1, dim2, nims, /overwrite)
+if(domask eq 2) then begin
+   mask = reform(mask, dim1, dim2, nims, /overwrite)
+endif 
 
+help, mask
 psfsub = reform(psfsub, dim1, dim2, nims, n_elements(nmodes), /overwrite)
 
 ;Allocate the final image array
@@ -305,11 +316,14 @@ endelse
 
 
 for k=0, n_elements(nmodes) -1 do begin
-
-   derotcomb_cube, finimt, psfsub[*,*,*,k], derot, meancomb=keyword_set(meancomb), sigma=sigma, $
+   rotpsfsub = psfsub[*,*,*,k]
+   
+   derotcomb_cube, finimt, rotpsfsub , derot, meancomb=keyword_set(meancomb), sigma=sigma, $
                      silent=keyword_set(silent), mask=mask
    finim[*,*,k] = finimt
    
+;    p = -1
+;    print, finimt[p]
 endfor
 
 ;-------------------------------------------------------------------

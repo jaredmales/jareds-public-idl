@@ -1,3 +1,39 @@
+;+
+; NAME: rot_cube
+;
+; PURPOSE: 
+;  Rotate a cube of images.
+;
+; Description:
+;  A cube of images is rotated by the specified angles, possibly with masking.  Rotation is handled by
+;  the rot function.  NOTE: angles here are specified counter-clockwise-positive.
+;
+; INPUTS:
+;  ims     : the images to rotate
+;  rotangs : the angles by which to rotate the images, in counter-clockwise degrees.
+;
+; INPUT KEYWORDS:
+;  mask    : an optional 1/0 binary mask which is also rotated.  can be a cube.
+;  m0val   : the value to apply to the post-rotation masked pixels, default is nan
+;
+; OUTPUTS:
+;  On output ims contains the rotated images.
+;
+; OUTPUT KEYWORDS:
+;  silent  : shut up.
+;
+; DEPENDENCIES:
+;   This procedure depends on the following code from JRM:
+;      get_cubedims.pro
+;      
+;
+; TODO:
+;   
+;
+; HISTORY:
+;  2013-ish: Written by Jared Males, jrmales@email.arizona.edu
+;  2015-04-07: Docs updated.
+;-
 pro rot_cube, ims, rotangs, mask=mask, m0val=m0val, silent=silent
 
 
@@ -32,7 +68,7 @@ for i=0, nims-1 do begin
       endelse
       
       idx = where(rmask lt 0.2)
-      rmask[idx] = m0val
+      if(idx[0] gt -1) then rmask[idx] = m0val
       
       ims[*,*,i] = ims[*,*,i]*rmask
    endif
