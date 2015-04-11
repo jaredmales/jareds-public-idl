@@ -76,7 +76,8 @@ pro pca_regions, finim, ims, derot, mindpx, regdr, regdq, nmodes, minrad=minrad,
                        meancomb=meancomb, sigma=sigma,  regmedsub=regmedsub, psfsub=psfsub, $
                        model_ims=model_ims, model_finim=model_finim, $
                        fitsfiles=fitsfile, ref_ims=ref_ims, refonly=refonly, refderot=refderot, $
-                       core_rads=core_rads, deltar=deltar, silent=silent, mask=mask, maxdq=maxdq
+                       core_rads=core_rads, deltar=deltar, silent=silent, mask=mask, ref_mask=ref_mask, $
+                       maxdq=maxdq
                        
 ;indmean=indmean,
 
@@ -115,7 +116,20 @@ endif else begin
    endelse
 endelse
 
-
+;and Check if reference mask has been applied
+domask_ref = 0
+if(doref eq 1) then begin
+   if(n_elements(ref_mask) lt dim1*dim2) then begin
+      domask_ref = 0;
+   endif else begin
+      get_cubedims, ref_mask, ref_maskdim1, ref_maskdim2, ref_masknims
+      if(ref_masknims eq 1) then begin
+         domask_ref = 1
+      endif else begin
+         domask_ref = 2; changing mask
+      endelse
+   endelse 
+endif
 
 ;-------------------------------------------------------------------
 ;Calculate the average image,and subtract it, unless we're doing individual image means
@@ -191,6 +205,7 @@ if(doref) then ref_ims = reform(ref_ims, dim1*dim2, ref_nims, /over)
 
 if(domask eq 2) then mask = reform(mask, dim1*dim2, nims, /overwrite)
 
+if(domask_ref eq 2) then ref_mask = reform(ref_mask, dim1*dim2, nims, /over)
 
 ;-------------------------------------------------------------------
 
@@ -269,6 +284,12 @@ for i = 0d, nregrs do begin ;radial
          mask_rims =0
       endelse
       
+      if(domask_ref eq 2) then begin
+         ref_mask_rims = ref_mask[idx, *]
+      endif else begin
+         ref_mask_rims =0
+      endelse
+      
       if(domodel) then begin
          pca_worker, rpsfsub, rims, derot, nmodes, mindq, $ 
                           dqisdn=keyword_set(dqisdn), modelrims=modelrims, modelsub=modelsub, regmedsub=keyword_set(regmedsub), silent=keyword_set(silent)
@@ -276,7 +297,7 @@ for i = 0d, nregrs do begin ;radial
          if(doref) then begin
             pca_worker_ref, rpsfsub, rims, refrims, derot, nmodes, mindq,  $
                        refonly=keyword_set(refonly),dqisdn=keyword_set(dqisdn), regmedsub=keyword_set(regmedsub),$
-                             silent=keyword_set(silent), refderot=refderot
+                             silent=keyword_set(silent), refderot=refderot, adi_mask=mask_rims, ref_mask=ref_mask_rims
                              
          endif else begin
             pca_worker, rpsfsub, rims, derot, nmodes, mindq, $
@@ -298,11 +319,16 @@ endfor ;i...nregrs
 ;Reform back to 2D images
 ims = reform(ims, dim1, dim2, nims, /overwrite)
 
+if(doref) then ref_ims = reform(ref_ims, dim1, dim2, ref_nims, /over)
+
 if(domask eq 2) then begin
    mask = reform(mask, dim1, dim2, nims, /overwrite)
 endif 
 
-help, mask
+if(domask_ref eq 2) then begin
+   ref_mask = reform(ref_mask, dim1, dim2, nims, /overwrite)
+endif 
+
 psfsub = reform(psfsub, dim1, dim2, nims, n_elements(nmodes), /overwrite)
 
 ;Allocate the final image array

@@ -193,7 +193,11 @@ for i=i0, i1 do begin
       
          for j=j, donmodes-1 do psf = psf + cfs[j]*klims[*,j]
         
-         newim = rims[*,i] - psf*mask[*,i]
+         if(n_elements(mask) gt 1) then begin
+            newim = rims[*,i] - psf*mask[*,i]
+         endif else begin
+            newim = rims[*,i] - psf
+         endelse
          psfsub[*,i, k] = newim;-median(newim)
          if(doregmedsub) then psfsub[*,i, k] = psfsub[*,i, k] - median(psfsub[*,i, k])
          

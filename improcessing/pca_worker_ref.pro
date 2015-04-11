@@ -1,7 +1,7 @@
-pro pca_worker_ref, psfsub, adi_rims, sdi_rims, rotoff, nmodes, mindq, err=err, msims=msims, $
+pro pca_worker_ref, psfsub, adi_rims, sdi_rims, derot, nmodes, mindq, err=err, msims=msims, $
                     nocovar=nocovar, silent=silent, indmean=indmean, modelrims=modelrims, $
                     modelsub=modelsub, imno=imno, maxdq=maxdq, refonly=refonly, dqisdn=dqisdn, $
-                    regmedsub=regmedsub
+                    regmedsub=regmedsub, refderot=refderot, adi_mask=adi_mask, ref_mask=ref_mask
 
 ;-------------------------------------------------------------------  
 ;Get the number of pixels and number of images
@@ -17,6 +17,12 @@ sdi_nims = (size(sdi_rims))[2]
 ;Combine the two image groups
 rims = [[adi_rims], [sdi_rims]]
 
+if(n_elements(adi_mask) gt 1 and n_elements(ref_mask) gt 1) then begin
+   mask = [[adi_mask], [ref_mask]]
+endif else begin
+   mask = 0;
+endelse
+
 ;-------------------------------------------------------------------  
 ;Decide if these are doubles or floats
 dodouble = 0
@@ -26,8 +32,11 @@ if(size(rims, /type) eq 5) then dodouble = 1
 ;Calculate the covariance matrix if desired
 if(~keyword_set(nocovar)) then begin
 
-   pca_covarmat, err, rims , meansub=(keyword_set(indmean))
+   pca_covarmat, err, rims , /meansub, mask=mask
 
+   ;for i=0,nims-1 do adi_rims[*,i] = adi_rims[*,i] - mean(adi_rims[*,i])
+   adi_rims = rims[*,0:nims-1]
+   
    if(arg_present(msims)) then msims = rims
 
 endif
@@ -65,8 +74,8 @@ if(keyword_set(regmedsub)) then doregmedsub = 1
 if(n_elements(maxdq) lt 1) then maxdq = 1e7
 
 ;-------------------------------------------------------------------  
-;Massage rotoff so angle subtraction works
-roff = requad_angles(rotoff)
+;Massage derot so angle subtraction works
+roff = requad_angles(derot)
 
 ;-------------------------------------------------------------------  
 ;Setup for image exclusion, rather than rotation exclusion
@@ -97,16 +106,24 @@ endif
 
 ;-------------------------------------------------------------------
 ;Handle reference images only
-rotoff_scale = 1.
+derot_scale = 1.
 if(keyword_set(refonly)) then begin
-   rotoff_scale = 0.
+   derot_scale = 0.
    if(mindq eq 0) then mindq = 0.0001
    
    norotmask = 1 ;this is always true if /refonly is set
    
-   print, 'rotoff_scale  ', rotoff_scale
+   print, 'derot_scale  ', derot_scale
 endif
 
+
+;-------------------------------------------------------------------
+;Handle derot angles for the reference images
+if(n_elements(refderot) eq sdi_nims) then begin
+   refdang = refderot ;this means reference images have signal too
+endif else begin
+   refdang = fltarr(sdi_nims)+1e6 ;add pure reference images with huge dang.
+endelse
 
 ;-------------------------------------------------------------------
 
@@ -120,11 +137,11 @@ for i=i0, i1 do begin
    if( norotmask eq 0 or klims_done eq 0 ) then begin
    
       if(keyword_set(dqisdn)) then begin
-         dimnum = [abs(imnum - imnum[i])*rotoff_scale, fltarr(sdi_nims)+1e6];add sdi images with huge dang.
+         dimnum = [abs(imnum - imnum[i])*derot_scale, refdang];fltarr(sdi_nims)+1e6];add sdi images with huge dang.
          idx = where(dimnum ge mindq)
       
       endif else begin
-         dang = [abs(angsub(roff,roff[i])) * rotoff_scale, fltarr(sdi_nims)+1e6] ;add sdi images with huge dang.
+         dang = [abs(angsub(roff,roff[i])) * derot_scale, refdang];fltarr(sdi_nims)+1e6] ;add sdi images with huge dang.
          idx = where(dang ge mindq and dang le maxdq)
       endelse
       
@@ -196,11 +213,15 @@ for i=i0, i1 do begin
       
          for j=j, donmodes-1 do psf = psf + cfs[j]*klims[*,j]
         
-         newim = adi_rims[*,i] - psf
-         psfsub[*,i, k] = newim;-median(newim)
-         if(doregmedsub) then psfsub[*,i, k] = psfsub[*,i, k] - median(psfsub[*,i, k])
-;         if(doregmedsub) then psfsub[*,i, k] = newim-median(newim)
+         if(n_elements(adi_mask) gt 1) then begin
+            newim = adi_rims[*,i] - psf*adi_mask[*,i]
+         endif else begin
+            newim = adi_rims[*,i] - psf
+         endelse
          
+         psfsub[*,i, k] = newim
+         if(doregmedsub) then psfsub[*,i, k] = psfsub[*,i, k] - median(psfsub[*,i, k])
+;        
       endelse
       
    endfor
