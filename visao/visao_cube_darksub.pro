@@ -36,7 +36,7 @@
 ;-
 pro visao_cube_darksub, ims, imtypes, medsub=medsub, meandark=meandark,  masksat=masksat, dark=dark, sdx=sdx, $           
                          AOLOOPST=AOLOOPST, ROTOFF=ROTOFF, EXPTIME=EXPTIME, AVGWFE=AVGWFE, DATEOBS=DATEOBS,$
-                         VFOCPOS=VFOCPOS, VGIMXPOS=VGIMXPOS, VGIMYPOS=VGIMYPOS
+                         VFOCPOS=VFOCPOS, VGIMXPOS=VGIMXPOS, VGIMYPOS=VGIMYPOS, FNAMES=FNAMES
 
 dim1 = (size(ims[*,*,0]))[1]
 dim2 = (size(ims[*,*,0]))[2]
@@ -100,6 +100,7 @@ if(n_elements(DATEOBS) gt 0) then DATEOBS=DATEOBS[sdx]
 if(n_elements(VFOCPOS) gt 0) then VFOCPOS=VFOCPOS[sdx]
 if(n_elements(VGIMXPOS) gt 0) then VGIMXPOS=VGIMXPOS[sdx]
 if(n_elements(VGIMYPOS) gt 0) then VGIMYPOS=VGIMYPOS[sdx]
+if(n_elements(FNAMES) gt 0) then FNAMES=FNAMES[sdx]
 
 end
 
